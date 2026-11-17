@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f6f43">
+<title>駅案内 翻訳プロトタイプ</title>
+<style>
+  :root {
+    --accent: #1f6f43;
+    --accent-weak: #e6f2ea;
+    --bg: #f5f6f7;
+    --card: #ffffff;
+    --text: #1d2125;
+    --muted: #6b7178;
+    --border: #dfe2e5;
+    --danger: #b3261e;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Segoe UI", sans-serif;
+    background: var(--bg); color: var(--text);
+    -webkit-text-size-adjust: 100%;
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 8px;
+    padding: calc(env(safe-area-inset-top) + 10px) 14px 10px;
+    background: var(--accent); color: #fff;
+  }
+  header h1 { font-size: 16px; margin: 0; flex: 1; font-weight: 600; }
+  .chip {
+    border: 1px solid rgba(255,255,255,.6); color: #fff; background: transparent;
+    border-radius: 999px; padding: 6px 12px; font-size: 13px;
+  }
+  .icon-btn { background: transparent; border: 0; color: #fff; font-size: 20px; padding: 4px 6px; }
+  main { padding: 14px; padding-bottom: calc(env(safe-area-inset-bottom) + 24px); max-width: 640px; margin: 0 auto; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+  h2 { font-size: 18px; margin: 6px 0 4px; }
+  p.lead { color: var(--muted); font-size: 14px; margin: 0 0 14px; line-height: 1.6; }
+
+  /* 言語選択 */
+  .lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .lang-btn {
+    text-align: left; padding: 14px 12px; border-radius: var(--radius);
+    border: 1px solid var(--border); background: var(--card); color: var(--text);
+    font-size: 16px; font-weight: 600; line-height: 1.3;
+  }
+  .lang-btn small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; margin-top: 3px; }
+  .lang-btn.selected { border-color: var(--accent); background: var(--accent-weak); }
+
+  /* カメラ */
+  .viewer {
+    position: relative; width: 100%; aspect-ratio: 3 / 4; max-height: 58vh;
+    background: #000; border-radius: var(--radius); overflow: hidden;
+  }
+  .viewer video, .viewer img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .viewer img { position: absolute; inset: 0; display: none; }
+  .viewer .overlay-msg {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: #fff; text-align: center; padding: 20px; font-size: 14px; line-height: 1.6;
+  }
+  .viewer .busy {
+    position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    flex-direction: column; gap: 12px; background: rgba(0,0,0,.55); color: #fff; font-size: 14px;
+  }
+  .spinner { width: 36px; height: 36px; border: 4px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .actions { display: flex; gap: 10px; margin-top: 12px; }
+  .btn {
+    flex: 1; padding: 14px 10px; border-radius: var(--radius); font-size: 15px; font-weight: 600;
+    border: 1px solid var(--border); background: var(--card); color: var(--text);
+  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn:disabled { opacity: .5; }
+  .file-label { display: flex; align-items: center; justify-content: center; }
+  .file-label input { display: none; }
+
+  /* 結果 */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-top: 12px; }
+  .summary { font-size: 16px; line-height: 1.6; }
+  .sign { display: flex; gap: 10px; padding: 10px 0; border-top: 1px solid var(--border); }
+  .sign:first-of-type { border-top: 0; }
+  .sign .ico { font-size: 22px; width: 28px; text-align: center; flex: none; }
+  .sign .tr { font-size: 17px; font-weight: 600; line-height: 1.4; }
+  .sign .orig { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .note { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  .error { color: var(--danger); font-size: 14px; line-height: 1.6; }
+  .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: #fff3cd; color: #7a5b00; margin-left: 6px; vertical-align: middle; }
+
+  /* 処理ログ */
+  details.log { margin-top: 14px; font-size: 12px; color: var(--muted); }
+  details.log summary { cursor: pointer; padding: 6px 0; }
+  details.log ol { padding-left: 18px; margin: 6px 0; }
+  details.log li { margin: 3px 0; word-break: break-all; }
+
+  /* 設定 */
+  label.field { display: block; font-size: 14px; font-weight: 600; margin: 14px 0 6px; }
+  input[type=password], input[type=text], select {
+    width: 100%; padding: 12px; font-size: 16px; border-radius: 10px; border: 1px solid var(--border); background: #fff;
+  }
+  .check { display: flex; align-items: center; gap: 8px; margin-top: 16px; font-size: 15px; }
+  .check input { width: 20px; height: 20px; }
+  .warn { font-size: 12px; color: var(--muted); line-height: 1.6; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>駅案内 翻訳プロトタイプ</h1>
+  <button class="chip" id="profileChip" hidden></button>
+  <button class="icon-btn" id="settingsBtn" aria-label="設定">⚙︎</button>
+</header>
+
+<main>
+  <!-- 画面1：母国語の選択（利用者プロファイルの入力） -->
+  <section class="screen" id="screen-profile">
+    <h2>母国語を選んでください<br><span style="font-size:14px;font-weight:400">Select your native language</span></h2>
+    <p class="lead">選んだ言語で、駅の案内表示を翻訳して表示します。</p>
+    <div class="lang-grid" id="langGrid"></div>
+  </section>
+
+  <!-- 画面2：カメラ撮影と翻訳結果 -->
+  <section class="screen" id="screen-camera">
+    <div class="viewer">
+      <video id="video" playsinline muted autoplay></video>
+      <img id="still" alt="撮影画像">
+      <div class="overlay-msg" id="cameraMsg">カメラを起動しています…</div>
+      <div class="busy" id="busy"><div class="spinner"></div><div id="busyText">翻訳しています…</div></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="shutterBtn">📷 撮影して翻訳</button>
+      <button class="btn" id="retakeBtn" hidden>↺ 撮り直す</button>
+      <label class="btn file-label">🖼 画像を選ぶ
+        <input type="file" id="fileInput" accept="image/*" capture="environment">
+      </label>
+    </div>
+
+    <div id="result"></div>
+
+    <details class="log">
+      <summary>処理ログ（データの流れ）</summary>
+      <ol id="logList"></ol>
+    </details>
+  </section>
+
+  <!-- 画面3：設定 -->
+  <section class="screen" id="screen-settings">
+    <h2>設定</h2>
+    <label class="field" for="apiKey">Claude APIキー</label>
+    <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off">
+    <label class="field" for="model">モデル</label>
+    <select id="model">
+      <option value="claude-sonnet-5-5">claude-sonnet-5-5（標準）</option>
+      <option value="claude-haiku-5-5">claude-haiku-5-5（高速・低コスト）</option>
+      <option value="claude-opus-5-5">claude-opus-5-5（高精度）</option>
+    </select>
+    <label class="check"><input type="checkbox" id="demoMode"> デモモード（APIを呼ばずに固定の結果を表示）</label>
+    <div class="actions">
+      <button class="btn" id="settingsCancel">戻る</button>
+      <button class="btn primary" id="settingsSave">保存</button>
+    </div>
+    <p class="warn">
+      ※ APIキーはこの端末のブラウザ内（localStorage）にのみ保存されます。<br>
+      ※ 試作用の構成です。ブラウザから直接APIを呼ぶため、本番運用ではサーバー経由に切り替えてください。
+    </p>
+  </section>
+</main>
+
+<script>
+'use strict';
+
+/* =====================================================================
+ * モジュール1：定数（対応言語・カテゴリ）
+ * ===================================================================== */
+const LANGUAGES = [
+  { code: 'en',      native: 'English',          ja: '英語',             en: 'English' },
+  { code: 'zh-Hans', native: '简体中文',          ja: '中国語（簡体字）', en: 'Simplified Chinese' },
+  { code: 'zh-Hant', native: '繁體中文',          ja: '中国語（繁体字）', en: 'Traditional Chinese' },
+  { code: 'ko',      native: '한국어',            ja: '韓国語',           en: 'Korean' },
+  { code: 'vi',      native: 'Tiếng Việt',       ja: 'ベトナム語',       en: 'Vietnamese' },
+  { code: 'th',      native: 'ไทย',              ja: 'タイ語',           en: 'Thai' },
+  { code: 'id',      native: 'Bahasa Indonesia', ja: 'インドネシア語',   en: 'Indonesian' },
+  { code: 'tl',      native: 'Tagalog',          ja: 'タガログ語',       en: 'Tagalog' },
+  { code: 'ne',      native: 'नेपाली',            ja: 'ネパール語',       en: 'Nepali' },
+  { code: 'es',      native: 'Español',          ja: 'スペイン語',       en: 'Spanish' },
+  { code: 'fr',      native: 'Français',         ja: 'フランス語',       en: 'French' },
+  { code: 'de',      native: 'Deutsch',          ja: 'ドイツ語',         en: 'German' },
+  { code: 'pt',      native: 'Português',        ja: 'ポルトガル語',     en: 'Portuguese' },
+  { code: 'ja',      native: '日本語',            ja: '日本語（確認用）', en: 'Japanese' },
+];
+
+const CATEGORY_ICON = {
+  exit: '🚪', line: '🚃', platform: '🔢', direction: '➡️',
+  facility: '🚻', ticket: '🎫', notice: '⚠️', other: 'ℹ️',
+};
+
+const MAX_IMAGE_SIDE = 1568;   // 生成AIに送る画像の長辺(px)
+const JPEG_QUALITY = 0.85;
+
+/* =====================================================================
+ * モジュール2：保存（利用者プロファイル・設定をlocalStorageに保持）
+ * ===================================================================== */
+const Store = {
+  get(key, fallback) {
+    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+    catch { return fallback; }
+  },
+  set(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* 保存不可でも動作は継続 */ }
+  },
+};
+
+const state = {
+  // 利用者プロファイル：今回は「母国語」の1項目のみ。将来ここに属性を追加する。
+  profile: Store.get('stationGuide.profile', { nativeLanguage: null }),
+  settings: Store.get('stationGuide.settings', { apiKey: '', model: 'claude-sonnet-5-5', demo: false }),
+  stream: null,
+  busy: false,
+};
+
+function currentLanguage() {
+  return LANGUAGES.find(l => l.code === state.profile.nativeLanguage) || null;
+}
+
+/* =====================================================================
+ * モジュール3：処理ログ（どのデータがどこへ渡ったかを画面で確認する）
+ * ===================================================================== */
+const Log = {
+  clear() { document.getElementById('logList').innerHTML = ''; },
+  add(text) {
+    const li = document.createElement('li');
+    const t = new Date().toLocaleTimeString('ja-JP');
+    li.textContent = `[${t}] ${text}`;
+    document.getElementById('logList').appendChild(li);
+  },
+};
+
+/* =====================================================================
+ * モジュール4：カメラ（起動・停止・撮影・画像縮小）
+ * ===================================================================== */
+const Camera = {
+  async start(video) {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('このブラウザではカメラを直接起動できません（HTTPSで開いているか確認してください）。「画像を選ぶ」から撮影できます。');
+    }
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false,
+    });
+    video.srcObject = stream;
+    await video.play();
+    return stream;
+  },
+  stop(stream) {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+  },
+  // 映像の現在フレームを縮小してJPEGのdataURLにする
+  capture(video) {
+    return drawScaled(video, video.videoWidth, video.videoHeight);
+  },
+};
+
+function drawScaled(source, w, h) {
+  const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(w, h));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(w * scale);
+  canvas.height = Math.round(h * scale);
+  canvas.getContext('2d').drawImage(source, 0, 0, canvas.width, canvas.height);
+  return { dataUrl: canvas.toDataURL('image/jpeg', JPEG_QUALITY), width: canvas.width, height: canvas.height };
+}
+
+function fileToScaledImage(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try { resolve(drawScaled(img, img.naturalWidth, img.naturalHeight)); }
+      catch (e) { reject(e); }
+      finally { URL.revokeObjectURL(url); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('画像を読み込めませんでした。')); };
+    img.src = url;
+  });
+}
+
+/* =====================================================================
+ * モジュール5：プロンプト生成（利用者プロファイル → 生成AIへの指示）
+ *   ※ 属性を増やすときは主にここを拡張する
+ * ===================================================================== */
+function buildPrompt(profile) {
+  const lang = LANGUAGES.find(l => l.code === profile.nativeLanguage);
+  const target = lang ? `${lang.en} (${lang.native})` : 'English';
+
+  const system =
+`You are a guidance assistant for passengers inside Japanese railway stations.
+The user cannot read Japanese well. Their profile:
+- Native language: ${target}
+
+Task: Read every piece of signage text visible in the photo (direction boards, exit signs, line names, platform numbers, facility signs, notices) and translate it into the user's native language.
+Rules:
+- Keep station names and line names recognizable: give the translated or romanized name, followed by the original Japanese in parentheses when helpful.
+- Keep numbers, exit codes (e.g. "A3"), and platform numbers exactly.
+- Do not invent text that is not visible. If text is partly hidden or unreadable, say so in "note".
+- Write "summary" and "note" in the user's native language.
+- Respond with JSON only, no markdown, using this schema:
+{
+  "summary": "one or two sentences explaining what this sign tells the user",
+  "signs": [
+    { "original": "Japanese text as shown", "translated": "translation", "category": "exit|line|platform|direction|facility|ticket|notice|other" }
+  ],
+  "note": "optional caveats, or empty string"
+}
+If there is no signage in the photo, return an empty "signs" array and explain in "summary".`;
+
+  const user = 'この写真に写っている駅の案内表示を翻訳してください。';
+  return { system, user, targetLabel: target };
+}
+
+/* =====================================================================
+ * モジュール6：生成AIクライアント（Claude API呼び出し）
+ * ===================================================================== */
+async function callClaude({ apiKey, model, system, user, imageBase64 }) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 2000,
+      system,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 } },
+          { type: 'text', text: user },
+        ],
+      }],
+    }),
+  });
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try { const j = await res.json(); if (j.error && j.error.message) msg += `: ${j.error.message}`; } catch { /* ignore */ }
+    throw new Error(`生成AIの呼び出しに失敗しました（${msg}）`);
+  }
+  const data = await res.json();
+  return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+}
+
+// デモモード：APIを呼ばずに固定の結果を返す（画面の流れの確認用）
+async function callDemo() {
+  await new Promise(r => setTimeout(r, 900));
+  return JSON.stringify({
+    summary: '[DEMO] Yamanote Line trains depart from platforms 1 and 2. The South Exit is straight ahead.',
+    signs: [
+      { original: '山手線 1・2番線', translated: 'Yamanote Line (山手線) — Platforms 1 & 2', category: 'line' },
+      { original: '南口', translated: 'South Exit', category: 'exit' },
+      { original: 'みどりの窓口', translated: 'Ticket Office (Midori-no-madoguchi)', category: 'ticket' },
+      { original: 'トイレ', translated: 'Restrooms', category: 'facility' },
+    ],
+    note: 'This is a fixed sample. Turn off demo mode in Settings to use the AI.',
+  });
+}
+
+// 生成AIの出力からJSON部分を取り出して解析する
+function parseResult(text) {
+  const cleaned = text.replace(/```(?:json)?/g, '').trim();
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+  if (start < 0 || end < start) throw new Error('生成AIの応答を解析できませんでした。');
+  const obj = JSON.parse(cleaned.slice(start, end + 1));
+  return {
+    summary: String(obj.summary || ''),
+    signs: Array.isArray(obj.signs) ? obj.signs : [],
+    note: String(obj.note || ''),
+  };
+}
+
+/* =====================================================================
+ * モジュール7：表示（翻訳結果を画面に描画）
+ * ===================================================================== */
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+function renderResult(result, { demo }) {
+  const box = document.getElementById('result');
+  box.innerHTML = '';
+
+  const sumCard = el('div', 'card');
+  const sum = el('div', 'summary', result.summary || '—');
+  if (demo) sum.appendChild(el('span', 'badge', 'DEMO'));
+  sumCard.appendChild(sum);
+  box.appendChild(sumCard);
+
+  if (result.signs.length) {
+    const list = el('div', 'card');
+    result.signs.forEach(s => {
+      const row = el('div', 'sign');
+      row.appendChild(el('div', 'ico', CATEGORY_ICON[s.category] || CATEGORY_ICON.other));
+      const body = el('div');
+      body.appendChild(el('div', 'tr', s.translated || ''));
+      body.appendChild(el('div', 'orig', s.original || ''));
+      row.appendChild(body);
+      list.appendChild(row);
+    });
+    if (result.note) list.appendChild(el('div', 'note', result.note));
+    box.appendChild(list);
+  } else if (result.note) {
+    box.appendChild(el('div', 'card note', result.note));
+  }
+}
+
+function renderError(message) {
+  const box = document.getElementById('result');
+  box.innerHTML = '';
+  const card = el('div', 'card');
+  card.appendChild(el('div', 'error', message));
+  box.appendChild(card);
+}
+
+/* =====================================================================
+ * モジュール8：処理の流れ（撮影 → プロンプト生成 → 生成AI → 表示）
+ * ===================================================================== */
+async function translateImage(image) {
+  if (state.busy) return;
+  const { apiKey, model, demo } = state.settings;
+  if (!demo && !apiKey) {
+    renderError('APIキーが設定されていません。右上の ⚙︎ から設定するか、デモモードをオンにしてください。');
+    return;
+  }
+
+  state.busy = true;
+  setBusy(true);
+  showStill(image.dataUrl);
+  Log.clear();
+
+  try {
+    Log.add(`① 利用者プロファイル読込：母国語 = ${state.profile.nativeLanguage}`);
+    Log.add(`② 画像取得：${image.width}×${image.height}px, 約${Math.round(image.dataUrl.length * 0.75 / 1024)}KB`);
+
+    const prompt = buildPrompt(state.profile);
+    Log.add(`③ プロンプト生成：翻訳先 = ${prompt.targetLabel}`);
+
+    const t0 = performance.now();
+    Log.add(demo ? '④ デモモード：固定の結果を使用' : `④ 生成AIへ送信：model = ${model}`);
+    const text = demo
+      ? await callDemo()
+      : await callClaude({ apiKey, model, system: prompt.system, user: prompt.user, imageBase64: image.dataUrl.split(',')[1] });
+    Log.add(`⑤ 応答受信：${Math.round(performance.now() - t0)}ms`);
+
+    const result = parseResult(text);
+    Log.add(`⑥ 解析完了：案内表示 ${result.signs.length} 件`);
+    renderResult(result, { demo });
+  } catch (e) {
+    Log.add(`× エラー：${e.message}`);
+    renderError(e.message);
+  } finally {
+    state.busy = false;
+    setBusy(false);
+  }
+}
+
+/* =====================================================================
+ * 画面制御
+ * ===================================================================== */
+const $ = id => document.getElementById(id);
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(`screen-${name}`).classList.add('active');
+  updateChip();
+  if (name === 'camera') startCamera(); else stopCamera();
+}
+
+function updateChip() {
+  const lang = currentLanguage();
+  const chip = $('profileChip');
+  const onProfile = $('screen-profile').classList.contains('active');
+  chip.hidden = !lang || onProfile;
+  if (lang) chip.textContent = `🌐 ${lang.native}`;
+}
+
+function setBusy(on) {
+  $('busy').style.display = on ? 'flex' : 'none';
+  $('shutterBtn').disabled = on;
+}
+
+function showStill(dataUrl) {
+  $('still').src = dataUrl;
+  $('still').style.display = 'block';
+  $('shutterBtn').hidden = true;
+  $('retakeBtn').hidden = false;
+}
+
+function hideStill() {
+  $('still').style.display = 'none';
+  $('still').removeAttribute('src');
+  $('shutterBtn').hidden = false;
+  $('retakeBtn').hidden = true;
+  $('result').innerHTML = '';
+}
+
+async function startCamera() {
+  if (state.stream) return;
+  const msg = $('cameraMsg');
+  msg.style.display = 'flex';
+  msg.textContent = 'カメラを起動しています…';
+  try {
+    state.stream = await Camera.start($('video'));
+    msg.style.display = 'none';
+  } catch (e) {
+    msg.textContent = e.name === 'NotAllowedError'
+      ? 'カメラの使用が許可されていません。ブラウザの設定で許可するか、「画像を選ぶ」から撮影してください。'
+      : (e.message || 'カメラを起動できませんでした。「画像を選ぶ」から撮影してください。');
+    $('shutterBtn').disabled = true;
+  }
+}
+
+function stopCamera() {
+  Camera.stop(state.stream);
+  state.stream = null;
+}
+
+// 言語選択ボタンを生成
+function renderLanguageGrid() {
+  const grid = $('langGrid');
+  grid.innerHTML = '';
+  LANGUAGES.forEach(lang => {
+    const b = el('button', 'lang-btn' + (lang.code === state.profile.nativeLanguage ? ' selected' : ''));
+    b.appendChild(document.createTextNode(lang.native));
+    b.appendChild(el('small', null, lang.ja));
+    b.addEventListener('click', () => {
+      state.profile.nativeLanguage = lang.code;
+      Store.set('stationGuide.profile', state.profile);
+      renderLanguageGrid();
+      showScreen('camera');
+    });
+    grid.appendChild(b);
+  });
+}
+
+function openSettings() {
+  $('apiKey').value = state.settings.apiKey;
+  $('model').value = state.settings.model;
+  $('demoMode').checked = state.settings.demo;
+  showScreen('settings');
+}
+
+function closeSettings() {
+  showScreen(state.profile.nativeLanguage ? 'camera' : 'profile');
+}
+
+// イベント登録
+$('profileChip').addEventListener('click', () => { renderLanguageGrid(); showScreen('profile'); });
+$('settingsBtn').addEventListener('click', openSettings);
+$('settingsCancel').addEventListener('click', closeSettings);
+$('settingsSave').addEventListener('click', () => {
+  state.settings = { apiKey: $('apiKey').value.trim(), model: $('model').value, demo: $('demoMode').checked };
+  Store.set('stationGuide.settings', state.settings);
+  closeSettings();
+});
+
+$('shutterBtn').addEventListener('click', () => {
+  const video = $('video');
+  if (!state.stream || !video.videoWidth) return;
+  translateImage(Camera.capture(video));
+});
+
+$('retakeBtn').addEventListener('click', hideStill);
+
+$('fileInput').addEventListener('change', async e => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  try { translateImage(await fileToScaledImage(file)); }
+  catch (err) { renderError(err.message); }
+});
+
+// 画面が裏に回ったらカメラを止め、戻ったら再開する（電池・発熱対策）
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopCamera();
+  else if ($('screen-camera').classList.contains('active')) startCamera();
+});
+
+// 起動
+renderLanguageGrid();
+showScreen(state.profile.nativeLanguage ? 'camera' : 'profile');
+</script>
+</body>
+</html>
