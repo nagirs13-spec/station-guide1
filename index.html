@@ -184,7 +184,7 @@
     <img id="still" alt="撮影した画像" hidden>
   </div>
 
-  <div id="scan"><div class="grid"></div><div class="beam"></div><div class="label">ANALYZING</div></div>
+  <div id="scan"><div class="grid"></div><div class="beam"></div><div class="label" id="scanLabel">ANALYZING</div></div>
   <svg id="fx" xmlns="http://www.w3.org/2000/svg"></svg>
   <div id="panels"></div>
 
@@ -220,6 +220,7 @@
       <label class="opt"><input type="radio" name="source" value="demo"><span>デモシーン<small>内蔵の駅構内シーンで案内の見え方を確認（無料）</small></span></label>
       <label class="opt"><input type="radio" name="source" value="copilot"><span>カメラ＋生成AI<small>撮影した写真を生成AIのアプリに送り、回答を貼り付けて表示（APIキー不要）</small></span></label>
       <label class="opt"><input type="radio" name="source" value="camera"><span>カメラ＋生成AI（API・自動）<small>撮影から表示までを自動で行う（APIキーが必要・1回約1円強）</small></span></label>
+      <label class="opt" id="mosaicRow"><input type="checkbox" id="mosaicOpt"><span>撮影時に人物にモザイクをかける<small>生成AIに送る前に、スマホの中で人物を検出してモザイクをかけます（初回のみ検出モデルを読み込み）</small></span></label>
       <div id="apiFields">
         <label class="field" for="apiKey">Claude APIキー</label>
         <input type="password" id="apiKey" placeholder="sk-ant-..." autocomplete="off">
@@ -296,7 +297,7 @@ const ICON = {
 const svgIcon = (k, stroke = '#fff') => `<svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[k] || ICON.other}</svg>`;
 const ICON_COMPASS = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>';
 const ICON_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
-const APP_VERSION = '1.5（2026-11-18）';
+const APP_VERSION = '1.6（2026-11-18）';
 const MAX_PANELS = 4;          // 線で結ぶパネルの最大数（スマホ表示部品）
 const MAX_IMAGE_SIDE = 1568;
 const JPEG_QUALITY = 0.85;
@@ -310,7 +311,7 @@ const Store = {
 };
 const state = {
   profile: Store.get('sg2.profile', { nativeLanguage: null }),     // 今回は母国語の1項目のみ
-  settings: Store.get('sg2.settings', { source: 'demo', apiKey: '', model: 'claude-sonnet-5-5' }),
+  settings: { mosaic: true, ...Store.get('sg2.settings', { source: 'demo', apiKey: '', model: 'claude-sonnet-5-5' }) },
   mode: 'idle',              // idle（通常） | scanning（解析中） | guiding（案内中）
   stream: null,
   frame: null,               // 解析対象の画像の大きさ { w, h }
@@ -961,7 +962,7 @@ const PhoneLayout = {
  * ===================================================================== */
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function toggleGuide(source) {
-  if (state.mode === 'scanning') return;
+  if (state.mode === 'scanning' || state.mode === 'masking') return;
   if (state.mode === 'guiding' || state.mode === 'waiting') return endGuide();
   if (!lang()) return openLang();
   if (state.settings.source === 'copilot') return CopilotBridge.start(source);
@@ -975,8 +976,11 @@ async function toggleGuide(source) {
     if (!state.stream || !$('video').videoWidth) return toast('カメラが起動していません。');
     image = Camera.capture();
     stopCamera();
-    state.frame = { w: image.w, h: image.h };
     $('still').src = image.dataUrl; $('still').hidden = false; $('video').hidden = true;
+    image = await protectImage(image);
+    if (!image) return endGuide();
+    state.frame = { w: image.w, h: image.h };
+    $('still').src = image.dataUrl;
   }
 
   setMode('scanning');
@@ -1021,10 +1025,11 @@ function endGuide() {
 function setMode(m) {
   state.mode = m;
   $('app').classList.toggle('guiding', m !== 'idle');
-  $('scan').classList.toggle('on', m === 'scanning');
-  $('guideBtn').classList.toggle('busy', m === 'scanning');
+  $('scan').classList.toggle('on', m === 'scanning' || m === 'masking');
+  $('scanLabel').textContent = m === 'masking' ? 'PRIVACY MASK' : 'ANALYZING';
+  $('guideBtn').classList.toggle('busy', m === 'scanning' || m === 'masking');
   $('guideIcon').innerHTML = (m === 'guiding' || m === 'waiting') ? ICON_CLOSE : ICON_COMPASS;
-  $('guideCap').textContent = (m === 'guiding' || m === 'waiting') ? 'CLOSE' : m === 'scanning' ? 'SCAN' : 'GUIDE';
+  $('guideCap').textContent = (m === 'guiding' || m === 'waiting') ? 'CLOSE' : m === 'scanning' ? 'SCAN' : m === 'masking' ? 'MASK' : 'GUIDE';
 }
 
 // カメラは「通常時（idle）」だけ動かす。撮影後は止めて、iPhoneでページが再読み込みされにくくする
@@ -1047,6 +1052,120 @@ function applySource() {
   const cam = state.settings.source !== 'demo';
   $('demoScene').hidden = cam; $('video').hidden = !cam; $('still').hidden = true;
   if (cam) startCamera(); else stopCamera();
+}
+
+/* =====================================================================
+ * モジュール12：人物モザイク（端末内で処理・APIは使わない）
+ *   検出モデル：YOLOX-nano（Apache-2.0）。index.html と同じ場所の yolox_nano.onnx を読み込む
+ *   実行エンジン：onnxruntime-web（CDNから読み込み）
+ *   画像全体＋4分割（重なりあり）で検出し、遠くの小さい人も拾う
+ * ===================================================================== */
+const ORT_VER = '1.31.1';
+const ORT_CDN = `https://cdn.jsdelivr.net/npm/onnxruntime-web@${ORT_VER}/dist/`;
+const MOSAIC_MODEL = 'yolox_nano.onnx';
+const Mosaic = {
+  session: null, loading: null,
+  CONF: 0.2, NMS: 0.5, S: 416,
+
+  loadScript(src) {
+    return new Promise((res, rej) => { const t = document.createElement('script'); t.src = src; t.onload = res; t.onerror = () => rej(new Error('読み込み失敗：' + src)); document.head.appendChild(t); });
+  },
+  load() {
+    if (this.session) return Promise.resolve(this.session);
+    if (!this.loading) this.loading = (async () => {
+      if (!window.ort) await this.loadScript(ORT_CDN + 'ort.min.js');
+      ort.env.wasm.numThreads = 1;              // GitHub Pagesではマルチスレッドが使えないため
+      ort.env.wasm.wasmPaths = ORT_CDN;
+      this.session = await ort.InferenceSession.create(MOSAIC_MODEL, { executionProviders: ['wasm'] });
+      return this.session;
+    })().catch(e => { this.loading = null; throw e; });
+    return this.loading;
+  },
+
+  // 画像の一部（ox, oy, tw, th）で人物を検出し、元画像の座標で返す
+  async detectRegion(src, ox, oy, tw, th) {
+    const S = this.S, r = Math.min(S / tw, S / th);
+    const c = document.createElement('canvas'); c.width = S; c.height = S;
+    const g = c.getContext('2d', { willReadFrequently: true });
+    g.fillStyle = 'rgb(114,114,114)'; g.fillRect(0, 0, S, S);
+    g.drawImage(src, ox, oy, tw, th, 0, 0, Math.round(tw * r), Math.round(th * r));
+    const px = g.getImageData(0, 0, S, S).data, n = S * S, arr = new Float32Array(3 * n);
+    for (let i = 0; i < n; i++) { arr[i] = px[i * 4 + 2]; arr[n + i] = px[i * 4 + 1]; arr[2 * n + i] = px[i * 4]; }   // BGR・0〜255
+    const sess = this.session;
+    const out = (await sess.run({ [sess.inputNames[0]]: new ort.Tensor('float32', arr, [1, 3, S, S]) }))[sess.outputNames[0]].data;
+    const boxes = [];
+    let idx = 0;
+    for (const st of [8, 16, 32]) {
+      const gs = S / st;
+      for (let gy = 0; gy < gs; gy++) for (let gx = 0; gx < gs; gx++, idx++) {
+        const b = idx * 85, score = out[b + 4] * out[b + 5];      // 物体らしさ × 人物（クラス0）
+        if (score < this.CONF) continue;
+        const cx = (out[b] + gx) * st, cy = (out[b + 1] + gy) * st, w = Math.exp(out[b + 2]) * st, h = Math.exp(out[b + 3]) * st;
+        boxes.push({ x1: (cx - w / 2) / r + ox, y1: (cy - h / 2) / r + oy, x2: (cx + w / 2) / r + ox, y2: (cy + h / 2) / r + oy, score });
+      }
+    }
+    return boxes;
+  },
+
+  nms(boxes) {
+    boxes.sort((a, b) => b.score - a.score);
+    const keep = [];
+    for (const b of boxes) {
+      if (keep.every(k => {
+        const iw = Math.max(0, Math.min(b.x2, k.x2) - Math.max(b.x1, k.x1)), ih = Math.max(0, Math.min(b.y2, k.y2) - Math.max(b.y1, k.y1));
+        const inter = iw * ih, u = (b.x2 - b.x1) * (b.y2 - b.y1) + (k.x2 - k.x1) * (k.y2 - k.y1) - inter;
+        return inter / u < this.NMS;
+      })) keep.push(b);
+    }
+    return keep;
+  },
+
+  async apply(image) {
+    await this.load();
+    const t0 = performance.now();
+    const img = new Image(); img.src = image.dataUrl; await img.decode();
+    const W = image.w, H = image.h;
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0, W, H);
+    const tw = Math.round(W * 0.6), th = Math.round(H * 0.6);
+    const regions = [[0, 0, W, H], [0, 0, tw, th], [W - tw, 0, tw, th], [0, H - th, tw, th], [W - tw, H - th, tw, th]];
+    let boxes = [];
+    for (const [ox, oy, rw, rh] of regions) boxes = boxes.concat(await this.detectRegion(img, ox, oy, rw, rh));
+    boxes = this.nms(boxes);
+    // 人物の範囲を少し広げてモザイク（ブロックの大きさは人物の大きさに合わせる）
+    const tmp = document.createElement('canvas'), tg = tmp.getContext('2d');
+    for (const b of boxes) {
+      const bw = b.x2 - b.x1, bh = b.y2 - b.y1;
+      const x1 = Math.max(0, Math.floor(b.x1 - 0.08 * bw)), y1 = Math.max(0, Math.floor(b.y1 - 0.05 * bh));
+      const x2 = Math.min(W, Math.ceil(b.x2 + 0.08 * bw)), y2 = Math.min(H, Math.ceil(b.y2 + 0.05 * bh));
+      const w = x2 - x1, h = y2 - y1;
+      if (w < 4 || h < 4) continue;
+      const bs = Math.max(6, Math.round(Math.max(w, h) / 10));
+      tmp.width = Math.max(1, Math.ceil(w / bs)); tmp.height = Math.max(1, Math.ceil(h / bs));
+      tg.imageSmoothingEnabled = true; tg.drawImage(c, x1, y1, w, h, 0, 0, tmp.width, tmp.height);
+      g.imageSmoothingEnabled = false; g.drawImage(tmp, 0, 0, tmp.width, tmp.height, x1, y1, w, h);
+    }
+    return { dataUrl: c.toDataURL('image/jpeg', JPEG_QUALITY), w: W, h: H, masked: boxes.length, maskMs: Math.round(performance.now() - t0) };
+  },
+};
+
+// 設定がオンなら人物にモザイクをかける。失敗した場合は、人物が写ったまま送らないよう中止する
+async function protectImage(image) {
+  if (state.settings.mosaic === false) return image;
+  const prev = state.mode;
+  setMode('masking');
+  try {
+    const out = await Mosaic.apply(image);
+    if (state.mode !== 'masking') return null;     // 処理中に中止された
+    setMode(prev);
+    if (out.masked) toast(`人物 ${out.masked}人 にモザイクをかけました。`, 'ok');
+    return out;
+  } catch (e) {
+    console.error(e);
+    setMode(prev);
+    toast('人物モザイクの準備に失敗しました。通信状況を確認するか、設定でモザイクをオフにしてください。');
+    return null;
+  }
 }
 
 /* =====================================================================
@@ -1101,10 +1220,21 @@ const CopilotBridge = {
     ].join('\n');
   },
 
-  start(source) {
-    if (state.stream && $('video').videoWidth) return this.open(Camera.capture(), source);
-    // カメラが使えない場合は、端末のカメラ・写真から選ぶ
-    pickImage().then(img => img ? this.open(img, '画像を選ぶ') : null);
+  async start(source) {
+    let img;
+    if (state.stream && $('video').videoWidth) {
+      img = Camera.capture();
+      stopCamera();
+      $('still').src = img.dataUrl; $('still').hidden = false; $('video').hidden = true;
+    } else {
+      img = await pickImage();               // カメラが使えない場合は、端末のカメラ・写真から選ぶ
+      if (!img) return;
+      source = '画像を選ぶ';
+      $('still').src = img.dataUrl; $('still').hidden = false; $('video').hidden = true;
+    }
+    img = await protectImage(img);
+    if (!img) return endGuide();
+    this.open(img, source);
   },
 
   open(image, source) {
@@ -1122,7 +1252,7 @@ const CopilotBridge = {
     Log.clear();
     Log.add(`① 起動の指示：${source}`);
     Log.add(`② 利用者プロファイル：母国語 = ${state.profile.nativeLanguage}`);
-    Log.add(`③ 画像：${image.w}×${image.h}`);
+    Log.add(`③ 画像：${image.w}×${image.h}` + (image.masked != null ? `／人物モザイク ${image.masked}人（${image.maskMs}ms）` : '／人物モザイクなし'));
     Log.add(`④ プロンプト生成：翻訳先 = ${buildPrompt(state.profile).target}`);
   },
 
@@ -1254,6 +1384,7 @@ function openLang() {
 function syncApiFields() {
   const src = document.querySelector('input[name=source]:checked')?.value;
   $('apiFields').hidden = src !== 'camera';
+  $('mosaicRow').hidden = src === 'demo';
 }
 document.querySelectorAll('input[name=source]').forEach(r => r.addEventListener('change', syncApiFields));
 
@@ -1261,6 +1392,7 @@ function openSettings() {
   document.querySelectorAll('input[name=source]').forEach(r => r.checked = r.value === state.settings.source);
   syncApiFields();
   $('apiKey').value = state.settings.apiKey; $('model').value = state.settings.model;
+  $('mosaicOpt').checked = state.settings.mosaic !== false;
   $('setSheet').hidden = false;
 }
 
@@ -1282,7 +1414,7 @@ $('copCopy').addEventListener('click', () => CopilotBridge.copyPrompt(false));
 $('copPaste').addEventListener('click', () => CopilotBridge.pasteFromClipboard());
 $('copShow').addEventListener('click', () => CopilotBridge.show());
 $('copCancel').addEventListener('click', () => endGuide());
-$('copRepick').addEventListener('click', () => pickImage().then(img => img && CopilotBridge.open(img, '画像を選び直す')));
+$('copRepick').addEventListener('click', async () => { const img = await pickImage(); if (!img) return; $('copSheet').hidden = true; const m = await protectImage(img); if (m) CopilotBridge.open(m, '画像を選び直す'); else endGuide(); });
 // 全画面表示（対応ブラウザのみ。横向きに固定できる端末では固定する）
 if (document.fullscreenEnabled) {
   $('fsBtn').hidden = false;
@@ -1296,7 +1428,7 @@ if (document.fullscreenEnabled) {
 $('setCancel').addEventListener('click', () => $('setSheet').hidden = true);
 $('setSave').addEventListener('click', () => {
   const src = document.querySelector('input[name=source]:checked')?.value || 'demo';
-  state.settings = { source: src, apiKey: $('apiKey').value.trim(), model: $('model').value };
+  state.settings = { source: src, apiKey: $('apiKey').value.trim(), model: $('model').value, mosaic: $('mosaicOpt').checked };
   Store.set('sg2.settings', state.settings);
   $('setSheet').hidden = true;
   applySource();
@@ -1315,6 +1447,7 @@ $('pasteBox').addEventListener('input', () => { if (state.mode === 'waiting') Pe
 
 setMode('idle');
 $('appVer').textContent = APP_VERSION;
+if (state.settings.source !== 'demo' && state.settings.mosaic !== false) setTimeout(() => Mosaic.load().catch(() => {}), 1500);
 updateHud(); setInterval(updateHud, 15000);
 const pendingAtStart = state.settings.source === 'copilot' ? Pending.load() : null;
 applySource();   // カメラの起動を待たずに復元する（復元すると案内中になるので、カメラは起動しない）
