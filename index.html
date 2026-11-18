@@ -1009,6 +1009,7 @@ async function toggleGuide(source) {
 }
 
 function endGuide() {
+  Pending.clear();
   PhoneLayout.clear();
   $('copSheet').hidden = true;
   setMode('idle');
@@ -1033,6 +1034,25 @@ async function applySource() {
     catch (e) { toast(e.name === 'NotAllowedError' ? 'カメラの使用が許可されていません。' : e.name === 'NotFoundError' ? 'カメラが見つかりません。GUIDEを押すと写真を選べます。' : e.message); }
   } else { Camera.stop(state.stream); state.stream = null; }
 }
+
+/* =====================================================================
+ * 一時保存：生成AIアプリに切り替えている間にページが再読み込みされても、
+ * 撮影した画像と貼り付けた回答を復元できるようにする（このタブの中だけ・1時間まで）
+ * ===================================================================== */
+const Pending = {
+  KEY: 'sg2.pending',
+  load() {
+    try {
+      const v = JSON.parse(sessionStorage.getItem(this.KEY) || 'null');
+      return v && Date.now() - v.t < 60 * 60 * 1000 ? v : null;
+    } catch { return null; }
+  },
+  save(patch) {
+    try { sessionStorage.setItem(this.KEY, JSON.stringify({ ...(this.load() || {}), ...patch, t: Date.now() })); }
+    catch { /* 容量不足などで保存できなくても動作は継続 */ }
+  },
+  clear() { try { sessionStorage.removeItem(this.KEY); } catch { /* ignore */ } },
+};
 
 /* =====================================================================
  * モジュール11：生成AI手動連携（APIを使わない生成AIクライアント）
@@ -1080,7 +1100,10 @@ const CopilotBridge = {
     PhoneLayout.clear();
     setMode('waiting');
     $('pasteBox').value = '';
+    $('pasteDiag').hidden = true;
     $('copSheet').hidden = false;
+    Pending.clear();
+    Pending.save({ image, text: '', shown: false });
     Log.clear();
     Log.add(`① 起動の指示：${source}`);
     Log.add(`② 利用者プロファイル：母国語 = ${state.profile.nativeLanguage}`);
@@ -1146,6 +1169,7 @@ const CopilotBridge = {
       const resp = parseResponse(text);
       state.response = resp;
       Log.add('⑥ 回答を貼り付け' + (resp.repaired ? '（途中で切れていたため補正）' : ''));
+      Pending.save({ text, shown: true });
       Log.json(resp);
       Log.add(`⑦ 解析完了：案内表示 ${resp.signs.length} 件`);
       $('copSheet').hidden = true;
@@ -1265,14 +1289,28 @@ $('setSave').addEventListener('click', () => {
 $('langSheet').addEventListener('click', e => { if (e.target === $('langSheet') && lang()) $('langSheet').hidden = true; });
 $('setSheet').addEventListener('click', e => { if (e.target === $('setSheet')) $('setSheet').hidden = true; });
 window.addEventListener('resize', () => { if (state.mode === 'guiding' && state.response) PhoneLayout.render(state.response, state.frame); });
-document.addEventListener('visibilitychange', () => {
+document.addEventListener('visibilitychange', async () => {
   if (state.settings.source === 'demo') return;
-  if (document.hidden) { Camera.stop(state.stream); state.stream = null; } else applySource();
+  if (document.hidden) { Camera.stop(state.stream); state.stream = null; return; }
+  // 戻ってきたとき：カメラだけを再開し、撮影した画像・手順画面・案内表示はそのまま残す
+  try { if (!state.stream) state.stream = await Camera.start(); } catch { /* 次にGUIDEを押したときに再試行 */ }
+  if (state.mode === 'idle') { $('still').hidden = true; $('video').hidden = false; }
 });
+// 手順画面の入力内容も一時保存
+$('pasteBox').addEventListener('input', () => { if (state.mode === 'waiting') Pending.save({ text: $('pasteBox').value }); });
 
 setMode('idle');
 updateHud(); setInterval(updateHud, 15000);
-applySource();
+const pendingAtStart = state.settings.source === 'copilot' ? Pending.load() : null;
+applySource();   // カメラの起動を待たずに復元する（許可の確認などで待たされることがあるため）
+(() => {
+  if (!pendingAtStart || !pendingAtStart.image || !lang()) return;
+  CopilotBridge.open(pendingAtStart.image, '前回の画像を復元');
+  $('pasteBox').value = pendingAtStart.text || '';
+  Pending.save({ text: pendingAtStart.text || '' });
+  if (pendingAtStart.shown && pendingAtStart.text) CopilotBridge.show();
+  else toast('撮影した画像を復元しました。', 'ok');
+})();
 if (!lang()) openLang();
 </script>
 </body>
