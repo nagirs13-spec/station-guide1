@@ -95,6 +95,20 @@
   .fsbtn { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.35); cursor: pointer; }
   .fsbtn svg { width: 16px; height: 16px; }
 
+  /* 目的に応じた強調 */
+  .panel .goal { margin-left: auto; flex: none; font-size: 10px; letter-spacing: .1em; color: #0b1a2a; background: var(--cyan); border-radius: 999px; padding: 2px 7px; font-weight: 700; }
+  .panel.target { border: 1.5px solid #fff; background: rgba(18, 70, 130, .78);
+    box-shadow: 0 0 0 1px rgba(95,225,255,.6), 0 0 26px rgba(95,225,255,.55); }
+  .panel.target .gd { color: #fff; font-size: 12.5px; }
+  #app.compact .panel.target .gd { -webkit-line-clamp: 3; }
+  .panel.show.rel-low { opacity: .42; }
+  .panel.answer { cursor: default; border-color: rgba(255,200,90,.7); }
+  .panel.answer .tile { background: #b7791f; box-shadow: 0 0 10px rgba(255,190,80,.6); }
+  #fx g.rel-low { opacity: .3; }
+  #fx g.target .bracket { stroke: #fff; stroke-width: 3.2; }
+  #fx g.target .lead { stroke-width: 2.4; }
+  #fx .ring.big { stroke: #fff; stroke-width: 1.6; animation-duration: 1.4s; }
+
   /* 上部HUD */
   .hud { position: absolute; left: 0; right: 0; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px;
     padding: calc(env(safe-area-inset-top) + 6px) calc(env(safe-area-inset-right) + 14px) 6px calc(env(safe-area-inset-left) + 14px); }
@@ -107,6 +121,8 @@
   .mini { width: 20px; height: 20px; border-radius: 5px; background: rgba(47,109,255,.85); display: grid; place-items: center; }
   .mini svg { width: 13px; height: 13px; }
   .clock { flex: 1; text-align: center; font-size: 15px; letter-spacing: .12em; font-variant-numeric: tabular-nums; text-shadow: 0 0 8px rgba(95,225,255,.6); }
+  .intentchip { max-width: 34vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .intentchip.unset { color: var(--muted); border-style: dashed; }
   .langchip { border: 1px solid rgba(255,255,255,.4); background: rgba(255,255,255,.1); border-radius: 999px; padding: 6px 11px; font-size: 12.5px;
     backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 
@@ -160,6 +176,33 @@
   .hint { font-size: 11.5px; color: var(--muted); margin: 6px 0 0; line-height: 1.5; }
   .row-btns.tight { margin-top: 8px; }
   .row-btns.tight .pbtn { padding: 9px 8px; font-size: 12.5px; }
+  .cop-body { padding: calc(env(safe-area-inset-top) + 10px) 16px 10px calc(env(safe-area-inset-left) + 16px) !important; display: flex; flex-direction: column; }
+  .cop-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .cop-head h2 { margin: 0; font-size: 16px; }
+  .phases { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); }
+  .phases .ph { padding: 3px 8px; border-radius: 999px; border: 1px solid rgba(255,255,255,.18); white-space: nowrap; }
+  .phases .ph.on { color: #fff; border-color: var(--cyan); background: rgba(95,225,255,.16); }
+  .phases .ph.done { color: var(--cyan); }
+  .cop-body section { margin-top: 8px; }
+  .cop-body .field { margin: 0 0 4px; font-size: 13px; color: var(--text); font-weight: 700; }
+  .cop-body .field small { font-weight: 400; color: var(--muted); font-size: 11px; }
+  #intentBox, #intentEdit { width: 100%; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,.22); background: rgba(255,255,255,.06);
+    color: var(--text); font: 15px/1.4 inherit; resize: none; height: 54px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chips button { font-size: 12px; padding: 5px 10px; border-radius: 999px; border: 1px solid rgba(95,225,255,.45); background: rgba(95,225,255,.08); cursor: pointer; }
+  .cop-body .pbtn.wide { margin-top: 8px; padding: 11px; }
+  .cop-body .pbtn.big { padding: 14px; font-size: 16px; }
+  .mini-links { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; }
+  .mini-links button { background: none; border: 0; padding: 2px 0; font-size: 12px; color: var(--cyan); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .mini-links.foot { margin-top: auto; padding-top: 8px; }
+  .mini-links.foot button { color: var(--muted); }
+  .lead2 { margin: 0 0 2px; font-size: 13px; line-height: 1.5; }
+  .lead2 small { display: block; font-size: 11px; color: var(--muted); }
+  #copPhase2.has-diag .lead2 small { display: none; }
+  .toast.right { left: auto; right: calc(env(safe-area-inset-right) + 100px); transform: none; max-width: 36%; }
+  .cop-body textarea#pasteBox { height: 44px; margin-top: 8px; }
+  .intent-body { width: min(560px, 90%) !important; padding: 14px 18px !important; }
+  .intent-body .sub { margin-bottom: 8px; }
   .diag { margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: rgba(60, 12, 12, .55); border: 1px solid rgba(255,123,114,.55); font-size: 12px; line-height: 1.55; }
   .diag .raw { margin-top: 6px; color: var(--muted); font-size: 11px; word-break: break-all; }
   textarea#pasteBox { width: 100%; height: 72px; margin-top: 8px; padding: 8px; border-radius: 10px; resize: vertical;
@@ -208,6 +251,7 @@
     <div class="round" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></div>
     <div class="minis" aria-hidden="true" id="minis"></div>
     <div class="clock" id="clock">--:--</div>
+    <button class="langchip intentchip" id="intentChip">🎯 目的を入力</button>
     <button class="langchip" id="langChip">🌐 —</button>
     <button class="fsbtn" id="fsBtn" aria-label="全画面" hidden><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
   </header>
@@ -264,23 +308,39 @@
     </div>
   </div>
 
-  <!-- 生成AI手動連携シート -->
+  <!-- 生成AI手動連携シート（フェーズ1：入力・送信／フェーズ2：貼り付け・表示） -->
   <div class="sheet side" id="copSheet" hidden>
-    <div class="body">
-      <h2>生成AIで案内</h2>
-      <div class="step"><span class="no">1</span><div>
-        <b>写真と指示文を生成AIに送る</b>
+    <div class="body cop-body">
+      <div class="cop-head">
+        <h2>生成AIで案内</h2>
+        <div class="phases"><span class="ph" id="ph1">1 入力・送信</span><span class="ph-sep">›</span><span class="ph" id="ph2">2 貼り付け・表示</span></div>
+      </div>
+      <section id="copPhase1">
+        <label class="field" for="intentBox">何を知りたいですか？<small>（任意・キーボードのマイクで話して入力もできます）</small></label>
+        <textarea id="intentBox" rows="2" placeholder="例：新幹線に乗りたい／北口から出たい"></textarea>
+        <div class="chips" id="copChips"></div>
         <button class="pbtn primary wide" id="copShare">生成AIに送る</button>
-        <p class="hint">共有先で生成AIのアプリを選んでください。指示文はコピー済みです。入っていなければ貼り付けてください。</p>
-        <div class="row-btns tight"><button class="pbtn" id="copSave">画像を保存</button><button class="pbtn" id="copCopy">指示文をコピー</button></div>
-      </div></div>
-      <div class="step"><span class="no">2</span><div>
-        <b>生成AIの回答をコピーして、ここに貼り付ける</b>
-        <textarea id="pasteBox" placeholder='{"summary": "...", "signs": [...]}'></textarea>
+        <div class="mini-links"><button id="copSave">画像を保存</button><button id="copCopy">指示文をコピー</button><button id="copToPaste">回答の貼り付けへ ›</button></div>
+      </section>
+      <section id="copPhase2" hidden>
+        <p class="lead2">生成AIの回答（JSON）をコピーしてから押してください。<small>生成AIに指示文が入っていなければ、貼り付けてから送信（コピー済み）。</small></p>
+        <button class="pbtn primary wide big" id="copPasteShow">貼り付けて表示</button>
+        <textarea id="pasteBox" rows="2" placeholder="うまくいかない場合は、ここに回答を貼り付けて「表示する」"></textarea>
         <div class="diag" id="pasteDiag" hidden></div>
-        <div class="row-btns tight"><button class="pbtn" id="copPaste">貼り付け</button><button class="pbtn primary" id="copShow">表示する</button></div>
-      </div></div>
-      <div class="row-btns tight"><button class="pbtn" id="copRepick">画像を選び直す</button><button class="pbtn" id="copCancel">キャンセル</button></div>
+        <div class="row-btns tight"><button class="pbtn" id="copBack">‹ 送り直す</button><button class="pbtn" id="copShow">表示する</button></div>
+      </section>
+      <div class="mini-links foot"><button id="copRepick">画像を選び直す</button><button id="copCancel">キャンセル</button></div>
+    </div>
+  </div>
+
+  <!-- 目的（知りたいこと）の入力シート -->
+  <div class="sheet" id="intentSheet" hidden>
+    <div class="body intent-body">
+      <h2>何を知りたいですか？</h2>
+      <p class="sub">案内のときに、目的に合うサインを強調します。撮影し直しても引き継ぎます。キーボードのマイクで話して入力もできます。</p>
+      <textarea id="intentEdit" rows="2" placeholder="例：新幹線に乗りたい／北口から出たい"></textarea>
+      <div class="chips" id="intentChips"></div>
+      <div class="row-btns tight"><button class="pbtn" id="intentClear">目的を消す</button><button class="pbtn" id="intentClose">閉じる</button><button class="pbtn primary" id="intentOk">決定</button></div>
     </div>
   </div>
   <input type="file" id="fileInput" accept="image/*" capture="environment" hidden>
@@ -318,7 +378,7 @@ const ICON = {
 const svgIcon = (k, stroke = '#fff') => `<svg viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[k] || ICON.other}</svg>`;
 const ICON_COMPASS = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>';
 const ICON_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
-const APP_VERSION = '1.7（2026-11-18）';
+const APP_VERSION = '1.8（2026-11-19）';
 const MAX_PANELS = 4;          // 線で結ぶパネルの最大数（スマホ表示部品）
 const MAX_IMAGE_SIDE = 1568;
 const JPEG_QUALITY = 0.85;
@@ -331,7 +391,7 @@ const Store = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* 保存不可でも継続 */ } },
 };
 const state = {
-  profile: Store.get('sg2.profile', { nativeLanguage: null }),     // 今回は母国語の1項目のみ
+  profile: Store.get('sg2.profile', { nativeLanguage: null, intent: '' }),   // 母国語（固定の属性）＋目的（その場の意図）
   settings: Store.get('sg2.settings', { source: 'demo', apiKey: '', model: 'claude-sonnet-5-5' }),
   mode: 'idle',              // idle（通常） | scanning（解析中） | guiding（案内中）
   stream: null,
@@ -361,7 +421,7 @@ const Trigger = {
     $('guideBtn').addEventListener('click', () => onToggle('ボタン'));
     document.addEventListener('keydown', e => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
-      if (!$('langSheet').hidden || !$('setSheet').hidden) return;
+      if (!$('langSheet').hidden || !$('setSheet').hidden || !$('intentSheet').hidden) return;
       if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON'].includes(e.target.tagName)) return;
       e.preventDefault();
       onToggle('キー入力');
@@ -392,26 +452,49 @@ const Camera = {
 /* =====================================================================
  * モジュール6：プロンプト生成（利用者プロファイル → 生成AIへの指示）
  * ===================================================================== */
-function buildPrompt(profile) {
+const INTENT_EXAMPLES = ['新幹線に乗りたい', '出口を探している', 'トイレに行きたい', '切符を買いたい', '乗り換えたい'];
+
+// 応答形式（共通の約束）と、目的に関するルール
+function promptCore(profile) {
   const l = LANGUAGES.find(x => x.code === profile.nativeLanguage);
   const target = l ? `${l.en} (${l.native})` : 'English';
-  const system =
-`You are a guidance assistant for passengers inside Japanese railway stations.
-The user cannot read Japanese well. User profile:
-- Native language: ${target}
+  const intent = (profile.intent || '').trim();
+  const lines = [
+    'You are a guidance assistant for passengers in Japanese railway stations.',
+    `User's native language: ${target}`,
+    intent ? `What the user wants to know (their own words): "${intent}"` : 'The user has not said what they want to know. Give general guidance.',
+    '',
+    'Task: find the station signs in the attached photo (max 6 signs). Explain each one in the native language' + (intent ? ', and answer what the user wants to know.' : '.'),
+    '',
+    'JSON format (use exactly these keys):',
+    '{"answer":"...","target_id":1,"summary":"...","signs":[{"id":1,"bbox":[0.10,0.40,0.05,0.06],"original":"...","category":"exit","label":"...","guidance":"...","relevance":"high","priority":1}],"note":""}',
+    '',
+    'Rules:',
+    '- bbox = [x, y, width, height] as numbers from 0 to 1, relative to the image width and height (top-left is 0,0). Approximate is OK.',
+    '- category: one of exit, line, platform, direction, facility, ticket, notice, other.',
+    '- original: the Japanese text on the sign (short).',
+    '- label: max 4 words in the native language. guidance: one short sentence in the native language.',
+    '- priority: 1 = most useful for finding the way, 3 = least.',
+    intent
+      ? '- answer: 1-2 short sentences in the native language that directly answer what the user wants to know, using ONLY the visible signs.'
+      : '- answer: one short sentence in the native language summarizing the most useful guidance.',
+    intent
+      ? '- target_id: the id of the sign the user should follow for their purpose. Use null if no visible sign helps.'
+      : '- target_id: null.',
+    intent
+      ? '- relevance (per sign): "high" = directly helps the purpose, "medium" = related, "low" = unrelated.'
+      : '- relevance (per sign): "medium" for all signs.',
+    '- If no visible sign helps, set target_id to null and say so in answer. Do not guess directions that are not shown on the signs.',
+    '- summary and note in the native language.',
+    '- Use straight double quotes ("). No comments. No trailing commas. Do not omit anything.',
+    '- If no signs are visible, return "signs": [].',
+  ];
+  return { text: lines.join('\n'), target, intent };
+}
 
-Find the station signage in the photo and explain, in the user's native language, what each sign means for a passenger.
-Rules:
-- "bbox": the sign's location as [x, y, width, height], each 0-1 relative to the image (top-left origin). Approximate is fine.
-- "label": very short (max ~4 words), readable at a glance on smart glasses. Keep arrows from the sign.
-- "guidance": one short sentence on what the passenger can do there or where it leads.
-- Keep station/line names, exit codes and platform numbers recognizable.
-- "priority": 1 = most useful for finding the way, 3 = least.
-- Do not invent text that is not visible; mention unreadable signs in "note".
-- "summary" and "note" in the native language.
-- JSON only, no markdown:
-{"summary":"","signs":[{"id":1,"bbox":[0,0,0,0],"original":"","category":"exit|line|platform|direction|facility|ticket|notice|other","label":"","guidance":"","priority":1}],"note":""}`;
-  return { system, user: 'この写真に写っている駅の案内表示について、案内を作成してください。', target };
+function buildPrompt(profile) {
+  const c = promptCore(profile);
+  return { system: c.text + '\n- Respond with the JSON only, no markdown.', user: 'この写真に写っている駅の案内表示について、案内を作成してください。', target: c.target, intent: c.intent };
 }
 
 /* =====================================================================
@@ -754,16 +837,48 @@ const DEMO_TEXT = {
     ]
   }
 };
+// デモ用：目的の言葉から、写真の中の対応するサインを選ぶ（生成AIの代わりの簡易な照合）
+const DEMO_KEYS = [
+  [4,  ['新幹線', 'しんかんせん', 'shinkansen', 'bullet', '新干线', '신칸센', 'tàu cao tốc', 'tren bala']],
+  [1,  ['トイレ', '化粧室', 'お手洗', 'toilet', 'restroom', 'bathroom', 'wc', '洗手间', '洗手間', '厕所', '廁所', '화장실', 'vệ sinh', 'aseo', 'baño']],
+  [9,  ['埼京', '川越', '新宿', '渋谷', 'りんかい', 'saikyo', 'kawagoe', 'shinjuku', 'shibuya', '涩谷', '澀谷', '신주쿠', '시부야', '사이쿄']],
+  [6,  ['高崎線', '上越線', '高崎・上越', 'takasaki', 'joetsu', 'kumagaya', '熊谷']],
+  [5,  ['宇都宮', '東北線', '上野', '東京', 'utsunomiya', 'ueno', 'tokyo', '东京', '우에노', '도쿄', '우쓰노미야', 'oyama', '小山']],
+  [3,  ['北改札', '北口', '鉄道博物館', 'museum', 'north gate', '博物', '박물관', 'bảo tàng', 'museo']],
+  [2,  ['中央改札', '乗り換え', '乗換', 'transfer', '東武', 'アーバン', 'ニューシャトル', 'new shuttle', 'tobu', 'central', '出口', '改札', '出たい', 'exit', 'gate', 'leave', '出站', '출구', '개찰', 'cửa ra', 'salida']],
+  [10, ['発車', '時刻', '時間', '次の電車', '何番線', 'departure', 'timetable', 'next train', '发车', '時刻表', '시간', '출발', 'giờ tàu', 'horario']],
+];
+const DEMO_NOT_FOUND = {
+  ja: 'この画面には、目的に合うサインが見当たりません。向きを変えて、もう一度撮影してください。',
+  en: "No sign for what you're looking for is visible here. Try facing another direction and capture again.",
+  'zh-Hans': '画面中没有找到符合您目的的指示牌。请换个方向再拍一次。',
+  'zh-Hant': '畫面中沒有找到符合您目的的指示牌。請換個方向再拍一次。',
+  ko: '목적에 맞는 안내판이 화면에 보이지 않습니다. 다른 방향으로 다시 촬영해 주세요.',
+  vi: 'Không thấy biển chỉ dẫn phù hợp ở đây. Hãy xoay sang hướng khác và chụp lại.',
+  es: 'No se ve aquí ningún letrero para lo que busca. Gire hacia otra dirección y vuelva a capturar.',
+};
+function demoMatch(intent) {
+  const q = (intent || '').toLowerCase();
+  if (!q) return null;
+  for (const [id, keys] of DEMO_KEYS) if (keys.some(k => q.includes(k.toLowerCase()))) return id;
+  return 0;   // 目的はあるが、写真の中に合うサインがない
+}
+
 const DemoProvider = {
   name: 'デモ（内蔵シーン用の想定応答）',
   async analyze({ profile }) {
-    const t = DEMO_TEXT[profile.nativeLanguage] || DEMO_TEXT.en;
+    const lang = profile.nativeLanguage;
+    const t = DEMO_TEXT[lang] || DEMO_TEXT.en;
+    const m = demoMatch(profile.intent);           // null＝目的なし、0＝見当たらない、数値＝従うべきサイン
+    const target = m ? DEMO_SIGNS.find(x => x.id === m) : null;
+    const rel = s => m == null ? 'medium' : (target && s.id === target.id) ? 'high' : (target && s.category === target.category && s.category !== 'line') ? 'medium' : 'low';   // 別の路線は関係が薄い
     return JSON.stringify({
+      answer: m == null ? t.summary : target ? t[target.id][1] : (DEMO_NOT_FOUND[lang] || DEMO_NOT_FOUND.en),
+      target_id: target ? target.id : null,
       summary: t.summary,
       signs: DEMO_SIGNS.map(s => ({
-        id: s.id,
-        bbox: s.bbox,
-        original: s.original, category: s.category, label: t[s.id][0], guidance: t[s.id][1], priority: s.priority,
+        id: s.id, bbox: s.bbox, original: s.original, category: s.category,
+        label: t[s.id][0], guidance: t[s.id][1], relevance: rel(s), priority: s.priority,
       })),
       note: '',
     });
@@ -835,8 +950,12 @@ function parseResponse(text) {
     id: g.id ?? i + 1, bbox: normBbox(g.bbox, state.frame), original: String(g.original || ''),
     category: ICON[g.category] ? g.category : 'other', label: String(g.label || g.original || ''),
     guidance: String(g.guidance || ''), priority: [1, 2, 3].includes(+g.priority) ? +g.priority : 2,
+    relevance: ['high', 'medium', 'low'].includes(String(g.relevance).toLowerCase()) ? String(g.relevance).toLowerCase() : 'medium',
   }));
-  return { summary: String(o.summary || ''), signs, note: String(o.note || ''), repaired: !!o.__repaired };
+  const tid = o.target_id ?? o.targetId ?? null;
+  const targetId = tid != null && signs.some(x => String(x.id) === String(tid)) ? signs.find(x => String(x.id) === String(tid)).id : null;
+  if (targetId != null) signs.find(x => x.id === targetId).relevance = 'high';
+  return { intent: (state.profile.intent || '').trim(), answer: String(o.answer || ''), targetId, summary: String(o.summary || ''), signs, note: String(o.note || ''), repaired: !!o.__repaired };
 }
 
 /* =====================================================================
@@ -855,6 +974,7 @@ const PhoneLayout = {
 
   render(resp, frame) {
     this.clear();
+    this.answer = resp.answer;
     const app = $('app'), W = app.clientWidth;
     app.classList.toggle('compact', app.clientHeight < 760);
     const proj = this.projector(frame);
@@ -864,11 +984,30 @@ const PhoneLayout = {
     const safeL = $('hud').querySelector('.round').getBoundingClientRect().left - app.getBoundingClientRect().left - 2;
 
     // 下段パネルの限界：画面の下端（安全領域を除く）
-    const bottomLimit = app.clientHeight - 16;
+    let bottomLimit = app.clientHeight - 16;
     const items = resp.signs.map(s => ({ ...s, r: proj(s.bbox) }))
       .filter(s => { const cx = s.r.x + s.r.w / 2, cy = s.r.y + s.r.h / 2; return cx > safeL && cx < contentR && cy > topLimit && cy < bottomLimit; });
-    const chosen = [...items].sort((a, b) => a.priority - b.priority).slice(0, MAX_PANELS);
+    // 並べる順：従うべきサイン → 関係度の高い順 → 優先度
+    const relRank = { high: 0, medium: 1, low: 2 };
+    const isTarget = x => resp.targetId != null && String(x.id) === String(resp.targetId);
+    const chosen = [...items].sort((a, b) => (isTarget(b) - isTarget(a)) || (relRank[a.relevance] - relRank[b.relevance]) || (a.priority - b.priority)).slice(0, MAX_PANELS);
+    chosen.forEach(c => { c.isTarget = isTarget(c); });
 
+    // 目的があるのに従うべきサインが画面にない場合：下に答えを出し、ほかのパネルは詰めて薄く表示する
+    const hasIntent = !!(resp.intent || '').trim();
+    this.noTarget = hasIntent && !chosen.some(c => c.isTarget) && !!resp.answer;
+    if (this.noTarget) {
+      const pw = Math.min(520, contentR - Math.max(12, safeL) - 20);
+      const p = el('div', 'panel answer');
+      p.style.width = pw + 'px'; p.style.left = Math.max(12, safeL) + (contentR - Math.max(12, safeL) - pw) / 2 + 'px';
+      p.innerHTML = `<div class="ph"><span class="tile">${svgIcon('other')}</span><div class="lbl"></div></div><div class="gd"></div>`;
+      p.querySelector('.lbl').textContent = '🎯 ' + resp.intent;
+      p.querySelector('.gd').textContent = resp.answer;
+      $('panels').appendChild(p);
+      p.style.top = (bottomLimit - p.offsetHeight) + 'px';
+      bottomLimit -= p.offsetHeight + 10;
+      setTimeout(() => p.classList.add('show'), 150);
+    }
     const byX = (a, b) => (a.r.x + a.r.w / 2) - (b.r.x + b.r.w / 2);
     const cys = chosen.map(c => c.r.y + c.r.h / 2);
     const flat = chosen.length > 1 && Math.max(...cys) - Math.min(...cys) < app.clientHeight * 0.12;
@@ -905,7 +1044,7 @@ const PhoneLayout = {
         const p = this.panel(s, left, pw);
         let ph = p.offsetHeight;
         // パネルが看板にかかる場合は、案内文を1行に詰める
-        const hits = band.top ? topLimit + ph > s.r.y - 8 : bottomLimit - ph < s.r.y + s.r.h + 8;
+        const hits = this.noTarget || (band.top ? topLimit + ph > s.r.y - 8 : bottomLimit - ph < s.r.y + s.r.h + 8);
         if (hits) { p.classList.add('tight'); ph = p.offsetHeight; }
         const top = band.top ? topLimit : bottomLimit - ph;
         p.style.top = top + 'px';
@@ -923,7 +1062,9 @@ const PhoneLayout = {
     p.style.left = left + 'px'; p.style.width = width + 'px'; p.style.top = '-999px';
     p.innerHTML = `<div class="ph"><span class="tile">${svgIcon(s.category)}</span><div class="lbl"></div></div><div class="gd"></div><div class="og"></div>`;
     p.querySelector('.lbl').textContent = s.label;
-    p.querySelector('.gd').textContent = s.guidance;
+    p.querySelector('.gd').textContent = s.isTarget && this.answer ? this.answer : s.guidance;
+    if (s.isTarget) { p.classList.add('target'); const g = el('span', 'goal', 'GOAL'); p.querySelector('.ph').appendChild(g); }
+    else if (s.relevance === 'low') p.classList.add('rel-low');
     p.querySelector('.og').textContent = s.original;
     p.addEventListener('click', () => { state.activeId = state.activeId === s.id ? null : s.id; this.highlight(); });
     $('panels').appendChild(p);
@@ -936,6 +1077,7 @@ const PhoneLayout = {
     this.shown.forEach((s, i) => {
       if (!s.anchor) return;
       const g = document.createElementNS(NS, 'g'); g.dataset.id = s.id;
+      if (s.isTarget) g.classList.add('target'); else if (s.relevance === 'low') g.classList.add('rel-low');
       const pad = 5, { x, y, w, h } = s.r, L = Math.min(16, w / 4, h / 2.5);
       const X = x - pad, Y = y - pad, R = x + w + pad, B = y + h + pad;
       const br = document.createElementNS(NS, 'path');
@@ -950,6 +1092,11 @@ const PhoneLayout = {
       const ring = document.createElementNS(NS, 'circle');
       ring.setAttribute('class', 'ring'); ring.setAttribute('cx', s.anchor.x); ring.setAttribute('cy', s.anchor.y); ring.setAttribute('r', 5);
       g.appendChild(ring);
+      if (s.isTarget) {
+        const big = document.createElementNS(NS, 'circle');
+        big.setAttribute('class', 'ring big'); big.setAttribute('cx', s.anchor.x); big.setAttribute('cy', s.anchor.y); big.setAttribute('r', 9);
+        g.appendChild(big);
+      }
       [[s.anchor, 3.2], [s.end, 2.6]].forEach(([pt, r]) => {
         const d = document.createElementNS(NS, 'circle');
         d.setAttribute('class', 'dot'); d.setAttribute('cx', pt.x); d.setAttribute('cy', pt.y); d.setAttribute('r', r);
@@ -1008,7 +1155,7 @@ async function toggleGuide(source) {
   Log.clear();
   try {
     Log.add(`① 起動の指示：${source}`);
-    Log.add(`② 利用者プロファイル：母国語 = ${state.profile.nativeLanguage}`);
+    Log.add(`② 利用者プロファイル：母国語 = ${state.profile.nativeLanguage}／目的 = ${state.profile.intent || '（なし）'}`);
     Log.add(`③ 画像：${demo ? 'デモシーン' : 'カメラ'} ${state.frame.w}×${state.frame.h}`);
     const prompt = buildPrompt(state.profile);
     Log.add(`④ プロンプト生成：翻訳先 = ${prompt.target}`);
@@ -1216,27 +1363,11 @@ const CopilotBridge = {
   image: null,
 
   promptText(profile) {
-    const target = buildPrompt(profile).target;
     return [
       '【重要】回答は JSON だけを、```json のコードブロック1つで出力してください。説明文は不要です。',
       'IMPORTANT: Reply with ONLY one JSON code block. No other text.',
       '',
-      'You are a guidance assistant for passengers in Japanese railway stations.',
-      `User's native language: ${target}`,
-      'Task: find the station signs in the attached photo (max 6 signs) and explain each one in the native language.',
-      '',
-      'JSON format (use exactly these keys):',
-      '{"summary":"...","signs":[{"id":1,"bbox":[0.10,0.40,0.05,0.06],"original":"...","category":"exit","label":"...","guidance":"...","priority":1}],"note":""}',
-      '',
-      'Rules:',
-      '- bbox = [x, y, width, height] as numbers from 0 to 1, relative to the image width and height (top-left is 0,0). Approximate is OK.',
-      '- category: one of exit, line, platform, direction, facility, ticket, notice, other.',
-      '- original: the Japanese text on the sign (short).',
-      '- label: max 4 words in the native language. guidance: one short sentence in the native language.',
-      '- priority: 1 = most useful for finding the way, 3 = least.',
-      '- summary and note in the native language.',
-      '- Use straight double quotes ("). No comments. No trailing commas. Do not omit anything.',
-      '- If no signs are visible, return "signs": [].',
+      promptCore(profile).text,
     ].join('\n');
   },
 
@@ -1257,6 +1388,14 @@ const CopilotBridge = {
     this.open(img, source);
   },
 
+  // フェーズ表示：1＝入力・送信、2＝貼り付け・表示
+  phase(n) {
+    $('copPhase1').hidden = n !== 1; $('copPhase2').hidden = n !== 2;
+    $('ph1').className = 'ph ' + (n === 1 ? 'on' : 'done'); $('ph2').className = 'ph' + (n === 2 ? ' on' : '');
+    if (n === 2) { $('pasteDiag').hidden = true; $('copPhase2').classList.remove('has-diag'); }
+    Pending.save({ phase: n });
+  },
+
   open(image, source) {
     this.image = image;
     state.frame = { w: image.w, h: image.h };
@@ -1265,15 +1404,16 @@ const CopilotBridge = {
     setMode('waiting');
     $('pasteBox').value = '';
     $('pasteDiag').hidden = true;
+    $('intentBox').value = state.profile.intent || '';
     $('copSheet').hidden = false;
     stopCamera();
     Pending.clear();
     Pending.save({ image, text: '', shown: false });
+    this.phase(1);
     Log.clear();
     Log.add(`① 起動の指示：${source}`);
     Log.add(`② 利用者プロファイル：母国語 = ${state.profile.nativeLanguage}`);
     Log.add(`③ 画像：${image.w}×${image.h}` + (image.masked != null ? `／人物モザイク ${image.masked}人（${image.maskMs}ms）` : '／人物モザイクなし'));
-    Log.add(`④ プロンプト生成：翻訳先 = ${buildPrompt(state.profile).target}`);
   },
 
   file() {
@@ -1284,12 +1424,20 @@ const CopilotBridge = {
   },
 
   async copyPrompt(quiet) {
+    if (!quiet) this.takeIntent();
     try { await navigator.clipboard.writeText(this.promptText(state.profile)); if (!quiet) toast('指示文をコピーしました。', 'ok'); return true; }
     catch { if (!quiet) toast('指示文をコピーできませんでした。'); return false; }
   },
 
+  takeIntent() {
+    setIntent($('intentBox').value);
+    Log.add(`④ 目的：${state.profile.intent || '（なし）'}／プロンプト生成：翻訳先 = ${buildPrompt(state.profile).target}`);
+  },
+
   async share() {
     if (!this.image) return;
+    this.takeIntent();
+    this.phase(2);
     const copied = await this.copyPrompt(true);     // 共有先で指示文が落ちる場合に備えてコピーしておく
     const file = this.file();
     const data = { files: [file], text: this.promptText(state.profile), title: '駅の案内表示' };
@@ -1297,32 +1445,46 @@ const CopilotBridge = {
       try {
         await navigator.share(data);
         Log.add(`⑤ 生成AIへ共有（手動）${copied ? '・指示文はコピー済み' : ''}`);
-        if (copied) toast('指示文をコピーしました。生成AIの入力欄に指示文が入っていなければ、貼り付けてから送信してください。', 'ok');
-      } catch (e) { if (e.name !== 'AbortError') toast('共有できませんでした。「画像を保存」と「指示文をコピー」を使ってください。'); }
+      } catch (e) {
+        this.phase(1);
+        if (e.name !== 'AbortError') toast('共有できませんでした。「画像を保存」と「指示文をコピー」を使ってください。');
+      }
     } else {
+      this.phase(1);
       toast('このブラウザは画像の共有に対応していません。「画像を保存」と「指示文をコピー」を使ってください。');
     }
   },
 
   save() {
     if (!this.image) return;
+    this.takeIntent();
     const a = document.createElement('a');
     a.href = this.image.dataUrl; a.download = `station-sign-${Date.now()}.jpg`;
     document.body.appendChild(a); a.click(); a.remove();
     Log.add('⑤ 画像を保存（手動で生成AIに添付）');
   },
 
-  async pasteFromClipboard() {
-    try { $('pasteBox').value = await navigator.clipboard.readText(); }
-    catch { toast('クリップボードを読み取れませんでした。入力欄を長押しして貼り付けてください。'); }
+  // 「貼り付けて表示」：クリップボードを読んで、そのまま表示する
+  async pasteAndShow() {
+    try {
+      const t = await navigator.clipboard.readText();
+      if (!t || !t.trim()) return toast('クリップボードが空です。生成AIの回答をコピーしてから押してください。');
+      $('pasteBox').value = t;
+      Pending.save({ text: t });
+      this.show();
+    } catch {
+      toast('クリップボードを読み取れませんでした。下の欄を長押しして貼り付け、「表示する」を押してください。');
+      $('pasteBox').focus();
+    }
   },
 
   diag(msg, text) {
     const d = $('pasteDiag');
     d.innerHTML = '';
     d.appendChild(el('div', 'msg', msg));
-    if (text) d.appendChild(el('div', 'raw', '受け取った回答の冒頭：' + text.slice(0, 160).replace(/\s+/g, ' ') + (text.length > 160 ? '…' : '')));
+    if (text) d.appendChild(el('div', 'raw', '受け取った回答の冒頭：' + text.slice(0, 90).replace(/\s+/g, ' ') + (text.length > 90 ? '…' : '')));
     d.hidden = false;
+    $('copPhase2').classList.add('has-diag');
     d.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   },
 
@@ -1344,10 +1506,10 @@ const CopilotBridge = {
     } catch (e) {
       Log.add(`× 解析エラー（${e.kind || '不明'}）：${e.message}`);
       const msg = e.kind === 'none'
-        ? '回答にJSONが見つかりませんでした。生成AIに指示文が届いていない可能性があります。「指示文をコピー」を押し、生成AIの入力欄に貼り付けて、写真と一緒に送り直してください。'
+        ? '回答にJSONがありません。指示文が届いていない可能性があります。「‹ 送り直す」から送り直してください。'
         : e.kind === 'schema'
-        ? '回答の形式が指示と違います（"signs" の項目がありません）。指示文をもう一度送ってください。'
-        : `JSONの形が崩れていて読み取れませんでした${e.pos != null ? `（${e.pos}文字目付近）` : ''}。生成AIに「JSONだけを、省略せずにコードブロックで出力してください」と依頼してください。`;
+        ? '回答の形式が指示と違います（"signs" がありません）。「‹ 送り直す」から送り直してください。'
+        : `JSONの形が崩れていて読めません${e.pos != null ? `（${e.pos}文字目付近）` : ''}。生成AIに「JSONだけを省略せずに出力して」と依頼してください。`;
       this.diag(msg, text);
     }
   },
@@ -1378,12 +1540,44 @@ function pickImage() {
 }
 
 /* =====================================================================
+ * 目的（知りたいこと）：利用者プロファイルの「その場の意図」。撮影し直しても引き継ぐ
+ * ===================================================================== */
+function setIntent(v) {
+  state.profile.intent = String(v || '').trim().slice(0, 120);
+  Store.set('sg2.profile', state.profile);
+  updateIntentChip();
+}
+function updateIntentChip() {
+  const c = $('intentChip'), v = state.profile.intent;
+  c.textContent = v ? `🎯 ${v}` : '🎯 目的を入力';
+  c.classList.toggle('unset', !v);
+}
+function fillChips(box, target) {
+  box.innerHTML = '';
+  INTENT_EXAMPLES.forEach(t => { const b = el('button', null, t); b.type = 'button'; b.addEventListener('click', () => { target.value = t; target.focus(); }); box.appendChild(b); });
+}
+function openIntent() {
+  $('intentEdit').value = state.profile.intent || '';
+  $('intentSheet').hidden = false;
+}
+function closeIntent(apply, clear) {
+  if (apply) {
+    const before = state.profile.intent;
+    setIntent(clear ? '' : $('intentEdit').value);
+    if (state.mode === 'waiting') $('intentBox').value = state.profile.intent;
+    // デモで案内中なら、新しい目的で表示し直す
+    if (state.settings.source === 'demo' && state.mode === 'guiding' && before !== state.profile.intent) { endGuide(); toggleGuide('目的の変更'); }
+  }
+  $('intentSheet').hidden = true;
+}
+
+/* =====================================================================
  * 画面制御（シート・HUD）
  * ===================================================================== */
 const $ = id => document.getElementById(id);
 function el(t, c, x) { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; }
 let toastTimer;
-function toast(msg, kind) { const t = $('toast'); t.textContent = msg; t.classList.toggle('ok', kind === 'ok'); t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 3800); }
+function toast(msg, kind) { const t = $('toast'); t.textContent = msg; t.classList.toggle('ok', kind === 'ok'); t.classList.toggle('right', !$('copSheet').hidden); t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 3800); }
 
 function openLang() {
   const g = $('langGrid'); g.innerHTML = '';
@@ -1428,9 +1622,18 @@ $('langBtn').addEventListener('click', openLang);
 $('langChip').addEventListener('click', openLang);
 $('setBtn').addEventListener('click', openSettings);
 $('copShare').addEventListener('click', () => CopilotBridge.share());
+$('copToPaste').addEventListener('click', () => { CopilotBridge.takeIntent(); CopilotBridge.phase(2); });
+$('copBack').addEventListener('click', () => CopilotBridge.phase(1));
+$('copPasteShow').addEventListener('click', () => CopilotBridge.pasteAndShow());
+$('intentChip').addEventListener('click', () => { if (state.mode === 'waiting' && !$('copPhase1').hidden) $('intentBox').focus(); else openIntent(); });
+$('intentOk').addEventListener('click', () => closeIntent(true, false));
+$('intentClear').addEventListener('click', () => closeIntent(true, true));
+$('intentClose').addEventListener('click', () => closeIntent(false));
+$('intentSheet').addEventListener('click', e => { if (e.target === $('intentSheet')) closeIntent(false); });
+fillChips($('copChips'), $('intentBox'));
+fillChips($('intentChips'), $('intentEdit'));
 $('copSave').addEventListener('click', () => CopilotBridge.save());
 $('copCopy').addEventListener('click', () => CopilotBridge.copyPrompt(false));
-$('copPaste').addEventListener('click', () => CopilotBridge.pasteFromClipboard());
 $('copShow').addEventListener('click', () => CopilotBridge.show());
 $('copCancel').addEventListener('click', () => endGuide());
 $('copRepick').addEventListener('click', async () => { const img = await pickImage(); if (!img) return; $('copSheet').hidden = true; const m = await protectImage(img); if (m) CopilotBridge.open(m, '画像を選び直す'); else endGuide(); });
@@ -1466,6 +1669,7 @@ $('pasteBox').addEventListener('input', () => { if (state.mode === 'waiting') Pe
 
 setMode('idle');
 $('appVer').textContent = APP_VERSION;
+updateIntentChip();
 if (state.settings.source !== 'demo') setTimeout(() => Mosaic.load().catch(() => {}), 1500);
 updateHud(); setInterval(updateHud, 15000);
 const pendingAtStart = state.settings.source === 'copilot' ? Pending.load() : null;
@@ -1475,6 +1679,7 @@ applySource();   // カメラの起動を待たずに復元する（復元する
   CopilotBridge.open(pendingAtStart.image, '前回の画像を復元');
   $('pasteBox').value = pendingAtStart.text || '';
   Pending.save({ text: pendingAtStart.text || '' });
+  if (pendingAtStart.phase === 2) CopilotBridge.phase(2);
   if (pendingAtStart.shown && pendingAtStart.text) CopilotBridge.show();
   else toast('撮影した画像を復元しました。', 'ok');
 })();
